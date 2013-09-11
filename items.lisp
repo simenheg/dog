@@ -127,3 +127,54 @@
 (defmethod item-sprite ((i item-potion))
   (sprite
    (symbolicate 'item-potion- (color i) '- (size i))))
+
+(defun bag-full-p ()
+  "Return T if the bag is full."
+  (= (length (player-bag *p1*)) *bag-size*))
+
+(defun equipped-p (i)
+  "Return T if item I is equipped."
+  (or (eq (player-weapon *p1*) i)
+      (eq (player-armor *p1*) i)
+      (eq (player-boots *p1*) i)
+      (eq (player-helmet *p1*) i)))
+
+(defun grab-item (item)
+  "Move ITEM from the level into the bag, unless the bag is full."
+  (cond
+    ((bag-full-p)
+     (add-message "Bag is full!"))
+    (t
+     (add-message (format nil "Grabbed the ~a." (object-name item)))
+     (add-to-bag item)
+     (setf (level-items *lev*) (remove item (level-items *lev*)))
+     (end-turn))))
+
+(defun add-to-bag (item)
+  "Add item I to the bag."
+  (setf (player-bag *p1*) (append (player-bag *p1*) (list item))))
+
+(defun remove-from-bag (item)
+  "Remove ITEM from the bag."
+  (setf (player-bag *p1*) (remove item (player-bag *p1*))))
+
+(defun drop-item (n)
+  (if (and n (nth n (player-bag *p1*)))
+      (let* ((item (nth n (player-bag *p1*))))
+        (add-message (format nil "Dropped the ~a." (object-name item)))
+        (remove-from-bag item)
+        (setf (item-x item) (player-x *p1*))
+        (setf (item-y item) (player-y *p1*))
+        (push item (level-items *lev*))
+        (end-turn))
+      (add-message "No such item.")))
+
+(defun apply-item (n)
+  (if (and n (nth n (player-bag *p1*)))
+      (item-apply (nth n (player-bag *p1*)))
+      (add-message "No such item.")))
+
+(defun inspect-item (n)
+  (if (and n (nth n (player-bag *p1*)))
+      (item-inspect (nth n (player-bag *p1*)))
+      (add-message "No such item.")))

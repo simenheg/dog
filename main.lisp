@@ -10,7 +10,8 @@
 (in-package :dog)
 
 (load "util.lisp")
-(load "item.lisp")
+(load "items.lisp")
+(load "monsters.lisp")
 
 (defparameter *width* 30
   "Number of horizontal tiles in the world map.")
@@ -71,27 +72,6 @@
 (defmethod player-pos (p)
   (cons (player-x p) (player-y p)))
 
-;; -------------------------------------------------------- [ MONSTER DECLS ]
-(defstruct monster x y hp atck xp (unique nil))
-
-(defstruct (monster-rat
-             (:include monster
-                       (hp (random-range 2 5))
-                       (atck 1)
-                       (xp 1))))
-
-(defstruct (monster-demon
-             (:include monster
-                       (hp (random-range 15 20))
-                       (atck 5)
-                       (xp 5))))
-
-(defstruct (monster-devil
-             (:include monster
-                       (hp 666)
-                       (atck 666)
-                       (xp 666))))
-
 ;; ------------------------------------------------------------ [ ANIMATION ]
 (defun update-anims ()
   (dolist (a *anims*) (funcall (anim-update a) a))
@@ -139,109 +119,6 @@
               (decf (anim-y-off a))
               (decf (anim-alpha a) 2)))
    *anims*))
-
-;;--------------------------------------------------------- [ MONSTER SPECS ]
-(defun monster-move (m x y)
-  (when (and (free-square-p x y)
-             (monster-walkable-p (map-ref x y)))
-    (setf (monster-x m) x)
-    (setf (monster-y m) y)))
-
-(defmethod monster-attack (m)
-  (let ((atck (monster-atck m))
-        (pos  (player-pos *p1*)))
-    (add-message (format nil "~a hits you for ~a damage!"
-                         (monster-print-name m) atck))
-    (setf (player-hp *p1*) (max 0 (- (player-hp *p1*) atck)))
-    (make-damage-anim (car pos) (cdr pos) (format nil "~a" atck))))
-
-(defmethod monster-print-name (m)
-  (format nil "~a~a" (if (monster-unique m) "" "the ")
-          (string-capitalize (object-name m))))
-
-(defmethod monster-die (m)
-  (add-message (format nil "~a dies!" (monster-print-name m)))
-  (spawn-item (make-instance 'item-corpse) *lev* (monster-x m) (monster-y m))
-  (xp-gain (monster-xp m)))
-
-(defmethod monster-ai (m)
-  (let ((px (player-x *p1*))
-        (py (player-y *p1*))
-        (x  (monster-x m))
-        (y  (monster-y m)))
-    (if (next-to-player-p x y)
-        (monster-attack m)
-        (if (zerop (random 2))
-            (cond ((< y py) (monster-move m x (1+ y)))
-                  ((> y py) (monster-move m x (1- y))))
-            (cond ((< x px) (monster-move m (1+ x) y))
-                  ((> x px) (monster-move m (1- x) y)))))))
-
-(defmethod monster-pix-pos (m)
-  (sdl:point :x (* (monster-x m) *tile-size*)
-             :y (* (monster-y m) *tile-size*)))
-
-(defmethod monster-show (m)
-  (format t "You see a ~a" (type-of m)))
-
-(defun update-monsters (level)
-  (setf (level-monsters level)
-        (mapcan (lambda (m) (if (<= (monster-hp m) 0)
-                           (progn (monster-die m) nil)
-                           (list m)))
-                (level-monsters level))))
-
-;; ---------------------------------------------------------------- [ ITEMS ]
-(defun bag-full-p ()
-  "Return T if the bag is full."
-  (= (length (player-bag *p1*)) *bag-size*))
-
-(defun equipped-p (i)
-  "Return T if item I is equipped."
-  (or (eq (player-weapon *p1*) i)
-      (eq (player-armor *p1*) i)
-      (eq (player-boots *p1*) i)
-      (eq (player-helmet *p1*) i)))
-
-(defun grab-item (item)
-  "Move ITEM from the level into the bag, unless the bag is full."
-  (cond
-    ((bag-full-p)
-     (add-message "Bag is full!"))
-    (t
-     (add-message (format nil "Grabbed the ~a." (object-name item)))
-     (add-to-bag item)
-     (setf (level-items *lev*) (remove item (level-items *lev*)))
-     (end-turn))))
-
-(defun add-to-bag (item)
-  "Add item I to the bag."
-  (setf (player-bag *p1*) (append (player-bag *p1*) (list item))))
-
-(defun remove-from-bag (item)
-  "Remove ITEM from the bag."
-  (setf (player-bag *p1*) (remove item (player-bag *p1*))))
-
-(defun drop-item (n)
-  (if (and n (nth n (player-bag *p1*)))
-      (let* ((item (nth n (player-bag *p1*))))
-        (add-message (format nil "Dropped the ~a." (object-name item)))
-        (remove-from-bag item)
-        (setf (item-x item) (player-x *p1*))
-        (setf (item-y item) (player-y *p1*))
-        (push item (level-items *lev*))
-        (end-turn))
-      (add-message "No such item.")))
-
-(defun apply-item (n)
-  (if (and n (nth n (player-bag *p1*)))
-      (item-apply (nth n (player-bag *p1*)))
-      (add-message "No such item.")))
-
-(defun inspect-item (n)
-  (if (and n (nth n (player-bag *p1*)))
-      (item-inspect (nth n (player-bag *p1*)))
-      (add-message "No such item.")))
 
 ;; --------------------------------------------------------------- [ PLAYER ]
 (defun player-grab ()
@@ -396,15 +273,16 @@
           ((> y1 y2) (make-tunnel x1 (1- y1) x2 y2)))))
 
 (defun make-room (x y size)
-  (mapc (lambda (p)
-          (let ((x* (+ x (car p)))
-                (y* (+ y (cdr p))))
-            (unless (almost-outside-map-p x* y*)
-              (map-set x* y* 'ground))))
-        (let ((size-lim (truncate size 2)))
-          (loop for i from (- size-lim) to size-lim append
-            (loop for j from (- size-lim) to size-lim
-                  collect (cons i j)))))
+  (mapc
+   (lambda (p)
+     (let ((x* (+ x (car p)))
+           (y* (+ y (cdr p))))
+       (unless (almost-outside-map-p x* y*)
+         (map-set x* y* 'ground))))
+   (let ((size-lim (truncate size 2)))
+     (loop for i from (- size-lim) to size-lim append
+       (loop for j from (- size-lim) to size-lim
+             collect (cons i j)))))
 
   (lambda (&optional p r)
     (cond
@@ -414,10 +292,12 @@
       (t (cons x y)))))
 
 (defun walls-within (map x y range)
-  (length (remove-if-not (lambda (s) (or (eq s 'wall) (not s)))
-                         (loop for i from (- range) to range append
-                           (loop for j from (- range) to range
-                                 collect (map-ref (+ x i) (+ y j) map))))))
+  (length
+   (remove-if-not
+    (lambda (s) (or (eq s 'wall) (not s)))
+    (loop for i from (- range) to range append
+      (loop for j from (- range) to range
+            collect (map-ref (+ x i) (+ y j) map))))))
 
 (defun map-disjoint-p (map)
   (let ((map (copy-tree map))
@@ -457,18 +337,20 @@
   (defun cel-iter (prev-map i)
     (if (zerop i)
         prev-map
-        (let ((mapz (loop for x from 0 to (1- *width*) collect
-                      (loop for y from 0 to (1- *height*) collect
-                        (if (or (>= (walls-within prev-map x y 1) 5)
-                                (zerop (walls-within prev-map x y 2)))
-                            'wall
-                            'ground)))))
+        (let ((mapz
+               (loop for x from 0 to (1- *width*) collect
+                 (loop for y from 0 to (1- *height*) collect
+                   (if (or (>= (walls-within prev-map x y 1) 5)
+                           (zerop (walls-within prev-map x y 2)))
+                       'wall
+                       'ground)))))
           (cel-iter mapz (1- i)))))
-  (let ((map (loop for _ from 1 to *width* collect
-               (loop for _ from 1 to *height* collect
-                 (if (< 40 (random 100))
-                     'ground
-                     'wall)))))
+  (let ((map
+         (loop for _ from 1 to *width* collect
+           (loop for _ from 1 to *height* collect
+             (if (< 40 (random 100))
+                 'ground
+                 'wall)))))
     (cel-iter map depth)))
 
 (defun map-gen-all-walls ()
@@ -565,8 +447,7 @@ version of NAME'd sprite."
      :color (sdl:color :r 20 :g 20 :b 20))
 
     (sdl:draw-box
-     (sdl:rectangle :x (+ rx 10) :y 35
-                    :w (- *panel-w* 20) :h 32)
+     (sdl:rectangle :x (+ rx 10) :y 35 :w (- *panel-w* 20) :h 32)
      :color sdl:*red*)
 
     (sdl:draw-string-blended-*
@@ -575,16 +456,16 @@ version of NAME'd sprite."
      (+ rx 10) 10)
 
     (sdl:draw-box
-     (sdl:rectangle :x (+ rx 10) :y 35
-                    :w (round (* (/ (player-hp *p1*)
-                                    (player-max-hp *p1*))
-                                 (- *panel-w* 20)))
-                    :h 32)
+     (sdl:rectangle
+      :x (+ rx 10)
+      :y 35
+      :w (round (* (/ (player-hp *p1*) (player-max-hp *p1*))
+                   (- *panel-w* 20)))
+      :h 32)
      :color sdl:*green*)
 
     (sdl:draw-string-blended-*
-     (format nil "Dungeon: ~a"
-             (level-name *lev*))
+     (format nil "Dungeon: ~a" (level-name *lev*))
      (+ rx 10) 80)
 
     (sdl:draw-string-blended-*
@@ -612,7 +493,8 @@ version of NAME'd sprite."
                  "none"))
      (+ rx 10) 160)
 
-    ;; Urk... Do something about these three ↓ ↓ ↓
+    ;; Urk... Do something about these three. ↓ ↓ ↓
+    ;; A lot of magic numbers.
 
     ;; Item frames
     (loop for i from 0 to (1- *bag-size*) do
@@ -643,10 +525,9 @@ version of NAME'd sprite."
 
     (display-messages 0 5)))
 
-;; Draw sprite SPR with relative offsets X and Y wrt. the player.
-;; Sprites too wide will be centered.
-;; Sprites too high will flood on top.
 (defun draw (spr x y)
+  "Draw sprite SPR with relative offsets X and Y wrt. the player. Sprites
+too wide will be centered. Sprites too high will flood on top."
   (let ((pix-dif-x (- (sdl:width spr) *tile-size*))
         (pix-dif-y (- (sdl:height spr) *tile-size*)))
     (sdl:draw-surface-at
@@ -688,7 +569,8 @@ version of NAME'd sprite."
     (loop for (pos level direction) in (level-stairs *lev*) do
       (let* ((fov (find pos *fov* :test #'equal))
              (dis (find pos (level-discovery *lev*) :test #'equal))
-             (sprite (sprite (if (eq direction 'up) 'obj-ladder 'obj-stairs))))
+             (sprite
+              (sprite (if (eq direction 'up) 'obj-ladder 'obj-stairs))))
         (when (or fov dis)
           (draw sprite (- (car pos) px) (- (cdr pos) py)))))
 
@@ -711,12 +593,13 @@ version of NAME'd sprite."
       (setf (sdl:alpha (anim-sprite a)) (anim-alpha a))
       (sdl:draw-surface-at
        (anim-sprite a)
-       (sdl:point :x (+ (* *tile-size* *vp-x*)
-                        (* (- (anim-x a) px) *tile-size*)
-                        (anim-x-off a))
-                  :y (+ (* *tile-size* *vp-y*)
-                        (* (- (anim-y a) py) *tile-size*)
-                        (anim-y-off a))))))
+       (sdl:point
+        :x (+ (* *tile-size* *vp-x*)
+              (* (- (anim-x a) px) *tile-size*)
+              (anim-x-off a))
+        :y (+ (* *tile-size* *vp-y*)
+              (* (- (anim-y a) py) *tile-size*)
+              (anim-y-off a))))))
 
   (draw-panel)
 
@@ -797,8 +680,8 @@ version of NAME'd sprite."
 (defun connect-levels (l1 l2)
   (labels ((recur (m1 m2)
              (let* ((pos (random-free-square m1))
-                    (x   (car pos))
-                    (y   (cdr pos)))
+                    (x (car pos))
+                    (y (cdr pos)))
                (if (reachable-square-p x y m2)
                    (progn
                      (add-stairs l1 x y l2 'down)
@@ -869,15 +752,16 @@ version of NAME'd sprite."
     ((:SDL-KEY-RETURN)            . player-climb)))
 
 (defun key-handle (key)
-  (cond (*grab-next-key*
-         (progn (funcall *next-item-function* (key-to-item key))
-                (setf *grab-next-key* nil)))
-        ((zerop (player-hp *p1*))
-         (case key
-           ((:SDL-KEY-ESCAPE :SDL-KEY-Q) (sdl:push-quit-event))))
-        (t
-         (let ((key-fun (assoc key *key-map* :test #'find)))
-           (when key-fun (funcall (cdr key-fun)))))))
+  (cond
+    (*grab-next-key*
+     (progn (funcall *next-item-function* (key-to-item key))
+            (setf *grab-next-key* nil)))
+    ((zerop (player-hp *p1*))
+     (case key
+       ((:SDL-KEY-ESCAPE :SDL-KEY-Q) (sdl:push-quit-event))))
+    (t
+     (let ((key-fun (assoc key *key-map* :test #'find)))
+       (when key-fun (funcall (cdr key-fun)))))))
 
 ;; ---------------------------------------------------------------- [ FONTS ]
 (defparameter *font-large* nil
