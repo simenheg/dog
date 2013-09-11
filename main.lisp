@@ -10,6 +10,7 @@
 (in-package :dog)
 
 (load "util.lisp")
+(load "item.lisp")
 
 (defparameter *width* 30
   "Number of horizontal tiles in the world map.")
@@ -91,9 +92,6 @@
                        (atck 666)
                        (xp 666))))
 
-;; ----------------------------------------------------------- [ ITEM DECLS ]
-(load "item.lisp")
-
 ;; ------------------------------------------------------------ [ ANIMATION ]
 (defun update-anims ()
   (dolist (a *anims*) (funcall (anim-update a) a))
@@ -163,7 +161,7 @@
 
 (defmethod monster-die (m)
   (add-message (format nil "~a dies!" (monster-print-name m)))
-  (spawn-item (make-item-corpse) *lev* (monster-x m) (monster-y m))
+  (spawn-item (make-instance 'item-corpse) *lev* (monster-x m) (monster-y m))
   (xp-gain (monster-xp m)))
 
 (defmethod monster-ai (m)
@@ -289,7 +287,7 @@
                                            (+ 5 (player-lvl *p1*)))
                              (if (null (player-weapon *p1*))
                                  0
-                                 (weapon-damage (player-weapon *p1*))))))
+                                 (damage (player-weapon *p1*))))))
           ((walkable-p (map-ref x* y*))
            (setf (player-x *p1*) x*) (setf (player-y *p1*) y*))))
   (recompute-fov)
@@ -567,7 +565,7 @@ version of NAME'd sprite."
      :color (sdl:color :r 20 :g 20 :b 20))
 
     (sdl:draw-box
-     (sdl:rectangle :x (+ rx 10) :y 30
+     (sdl:rectangle :x (+ rx 10) :y 35
                     :w (- *panel-w* 20) :h 32)
      :color sdl:*red*)
 
@@ -577,7 +575,7 @@ version of NAME'd sprite."
      (+ rx 10) 10)
 
     (sdl:draw-box
-     (sdl:rectangle :x (+ rx 10) :y 30
+     (sdl:rectangle :x (+ rx 10) :y 35
                     :w (round (* (/ (player-hp *p1*)
                                     (player-max-hp *p1*))
                                  (- *panel-w* 20)))
@@ -659,13 +657,13 @@ version of NAME'd sprite."
 (defun draw-player ()
   (draw (sprite 'obj-player) 0 0)
   (when (player-weapon *p1*)
-    (draw (weapon-eq-sprite (player-weapon *p1*)) 0 0))
+    (draw (eq-sprite (player-weapon *p1*)) 0 0))
   (when (player-armor *p1*)
-    (draw (armor-eq-sprite (player-armor *p1*)) 0 0))
+    (draw (eq-sprite (player-armor *p1*)) 0 0))
   (when (player-boots *p1*)
-    (draw (boots-eq-sprite (player-boots *p1*)) 0 0))
+    (draw (eq-sprite (player-boots *p1*)) 0 0))
   (when (player-helmet *p1*)
-    (draw (helmet-eq-sprite (player-helmet *p1*)) 0 0)))
+    (draw (eq-sprite (player-helmet *p1*)) 0 0)))
 
 (defun display ()
   (sdl:clear-display sdl:*black*)
@@ -693,7 +691,7 @@ version of NAME'd sprite."
              (sprite (sprite (if (eq direction 'up) 'obj-ladder 'obj-stairs))))
         (when (or fov dis)
           (draw sprite (- (car pos) px) (- (cdr pos) py)))))
-    
+
     ;; Draw items
     (dolist (m (level-items *lev*))
       (when (find (cons (item-x m) (item-y m)) *fov* :test #'equal)
@@ -920,27 +918,25 @@ version of NAME'd sprite."
     (spawn-monster #'make-monster-demon l)
 
     (dotimes (_ 8) (spawn-monster #'make-monster-rat l))
-    (dotimes (_ 5) (spawn-item (make-item-potion :color 'red :size 'big) l))
+    (dotimes (_ 5)
+      (spawn-item (make-instance 'item-potion :color 'red :size 'big) l))
 
-    (dotimes (_ 1) (spawn-item (make-item-banana) l))
-    (dotimes (_ 1) (spawn-item (make-item-radish) l))
-    (dotimes (_ 1) (spawn-item (make-item-pear) l))
-    (dotimes (_ 3) (spawn-item (make-item-short-sword) l))
-    (dotimes (_ 1) (spawn-item (make-item-long-sword) l))
-    (dotimes (_ 3) (spawn-item (make-item-leather-armor) l))
-    (dotimes (_ 3) (spawn-item (make-item-leather-boots) l))
-    (dotimes (_ 1) (spawn-item (make-item-steel-armor) l))
-    (dotimes (_ 3) (spawn-item (make-item-steel-helmet) l)))
+    (dotimes (_ 1) (spawn-item (make-instance 'item-banana) l))
+    (dotimes (_ 1) (spawn-item (make-instance 'item-radish) l))
+    (dotimes (_ 1) (spawn-item (make-instance 'item-pear) l))
+    (dotimes (_ 3) (spawn-item (make-instance 'item-short-sword) l))
+    (dotimes (_ 1) (spawn-item (make-instance 'item-long-sword) l))
+    (dotimes (_ 3) (spawn-item (make-instance 'item-leather-armor) l))
+    (dotimes (_ 3) (spawn-item (make-instance 'item-leather-boots) l))
+    (dotimes (_ 1) (spawn-item (make-instance 'item-steel-armor) l))
+    (dotimes (_ 3) (spawn-item (make-instance 'item-steel-helmet) l)))
 
   (let ((l (make-level :name 'second :map (map-gen-all-walls))))
     (add-level l)
     (loop until (not (map-disjoint-p (level-map l)))
           do (setf (level-map l) (map-gen-cel 4)))
     (dotimes (_ 5) (spawn-monster #'make-monster-rat l))
-    (dotimes (_ 4) (spawn-monster #'make-monster-demon l))
-    (spawn-item (make-item-banana) l)
-    (spawn-item (make-item-radish) l)
-    (spawn-item (make-item-pear) l))
+    (dotimes (_ 4) (spawn-monster #'make-monster-demon l)))
 
   (let ((l (make-level :name 'last :map (map-gen-all-walls))))
     (add-level l)

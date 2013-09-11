@@ -1,49 +1,77 @@
-(defstruct item x y)
+(defclass item ()
+  ((x
+    :initarg :x
+    :accessor item-x
+    :documentation "X position of item on the map.")
+   (y
+    :initarg :y
+    :accessor item-y
+    :documentation "Y position of item on the map.")))
 
-(defstruct (food (:include item)))
-(defstruct (item-banana (:include food)))
-(defstruct (item-radish (:include food)))
-(defstruct (item-pear (:include food)))
-(defstruct (item-corpse (:include food)))
+(defclass food (item) ())
+(defclass item-banana (food) ())
+(defclass item-radish (food) ())
+(defclass item-pear (food) ())
+(defclass item-corpse (food) ())
 
-(defstruct (item-potion (:include item))
-  color size)
+(defclass item-potion (item)
+  ((color
+    :initarg :color
+    :accessor color)
+   (size
+    :initarg :size
+    :accessor size)))
 
-(defstruct (equipment (:include item))
-  eq-sprite)
+(defclass equipment (item)
+  ((eq-sprite
+    :initarg :eq-sprite
+    :accessor eq-sprite
+    :documentation "Small version of the sprite layered on the player sprite
+    when the item is equipped.")))
 
-(defstruct (weapon (:include equipment))
-  damage)
+(defclass weapon (equipment)
+  ((damage
+    :initarg :damage
+    :initform (error "Must supply a weapon's damage.")
+    :accessor damage)))
 
-(defstruct (armor (:include equipment)))
-(defstruct (boots (:include equipment)))
-(defstruct (helmet (:include equipment)))
+(defclass armor (equipment) ())
+(defclass boots (equipment) ())
+(defclass helmet (equipment) ())
 
-(defstruct (item-short-sword
-             (:include weapon
-                       (damage 7)
-                       (eq-sprite (sprite 'eq-short-sword)))))
+(defclass item-short-sword (weapon)
+  ((damage
+    :initform 7)
+   (eq-sprite
+    :initform (sprite 'eq-short-sword))))
 
-(defstruct (item-long-sword
-             (:include weapon
-                       (damage 13)
-                       (eq-sprite (sprite 'eq-long-sword)))))
+(defclass item-short-sword (weapon)
+  ((damage
+    :initform 7)
+   (eq-sprite
+    :initform (sprite 'eq-short-sword))))
 
-(defstruct (item-steel-armor
-             (:include armor
-                       (eq-sprite (sprite 'eq-steel-armor)))))
+(defclass item-long-sword (weapon)
+  ((damage
+    :initform 13)
+   (eq-sprite
+    :initform (sprite 'eq-long-sword))))
 
-(defstruct (item-leather-armor
-             (:include armor
-                       (eq-sprite (sprite 'eq-leather-armor)))))
+(defclass item-steel-armor (armor)
+  ((eq-sprite
+    :initform (sprite 'eq-steel-armor))))
 
-(defstruct (item-leather-boots
-             (:include boots
-                       (eq-sprite (sprite 'eq-leather-boots)))))
+(defclass item-leather-armor (armor)
+  ((eq-sprite
+    :initform (sprite 'eq-leather-armor))))
 
-(defstruct (item-steel-helmet
-             (:include helmet
-                       (eq-sprite (sprite 'eq-steel-helmet)))))
+(defclass item-leather-boots (boots)
+  ((eq-sprite
+    :initform (sprite 'eq-leather-boots))))
+
+(defclass item-steel-helmet (helmet)
+  ((eq-sprite
+    :initform (sprite 'eq-steel-helmet))))
 
 (defmethod item-apply (i)
   (add-message (format nil "Can't apply the ~a." (object-name i))))
@@ -70,27 +98,32 @@
          (setf ,slot ,i))))
 
 (defmethod item-apply ((i equipment))
-  (cond
-    ((weapon-p i) (equipment-apply (player-weapon *p1*) i))
-    ((armor-p i)  (equipment-apply (player-armor *p1*) i))
-    ((boots-p i)  (equipment-apply (player-boots *p1*) i))
-    ((helmet-p i) (equipment-apply (player-helmet *p1*) i))
-    (t (error "ITEM-APPLY: Unhandled case: ~a" i)))
+  (let ((type (type-of i)))
+    (cond
+      ((subtypep type 'weapon)
+       (equipment-apply (player-weapon *p1*) i))
+      ((subtypep type 'armor)
+       (equipment-apply (player-armor *p1*) i))
+      ((subtypep type 'boots)
+       (equipment-apply (player-boots *p1*) i))
+      ((subtypep type 'helmet)
+       (equipment-apply (player-helmet *p1*) i))
+      (t (error "ITEM-APPLY: Unhandled case: ~a" i))))
   (end-turn))
 
 (defmethod item-inspect (i)
   (add-message (format nil "ERROR: Description missing for ~a."
                        (object-name i))))
 
-;; (defmethod item-inspect ((i food))
-;;   (add-message (format nil "A delicious looking ~a." (object-name i))))
+(defmethod item-inspect ((i food))
+  (add-message (format nil "A delicious looking ~a." (object-name i))))
 
-;; (defmethod item-inspect ((i item-potion))
-;;   (add-message (format nil "A bubbling ~a." (object-name i))))
+(defmethod item-inspect ((i item-potion))
+  (add-message (format nil "A bubbling ~a." (object-name i))))
 
 (defmethod item-sprite (i)
   (sprite (type-of i)))
 
 (defmethod item-sprite ((i item-potion))
   (sprite
-   (symbolicate 'item-potion- (item-potion-color i) '- (item-potion-size i))))
+   (symbolicate 'item-potion- (color i) '- (size i))))
