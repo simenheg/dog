@@ -1,22 +1,53 @@
-(defstruct monster x y hp atck xp (unique nil))
+(defclass monster ()
+  ((x
+    :initarg :x
+    :accessor monster-x
+    :documentation "X position of monster on the map.")
+   (y
+    :initarg :y
+    :accessor monster-y
+    :documentation "Y position of monster on the map.")
+   (hp
+    :initarg :hp
+    :accessor hp
+    :documentation "Initial hit points of monster")
+   (damage
+    :initarg :damage
+    :accessor damage
+    :documentation "Damage dealt per attack.")
+   (xp
+    :initarg :xp
+    :accessor xp
+    :documentation "Experience points gained from killing monster.")
+   (unique-p
+    :initarg :unique-p
+    :accessor unique-p
+    :initform nil
+    :documentation "T if monster is unique (max one instance per game).")))
 
-(defstruct (monster-rat
-             (:include monster
-                       (hp (random-range 2 5))
-                       (atck 1)
-                       (xp 1))))
+(defclass monster-rat (monster)
+  ((hp
+    :initform (random-range 2 5))
+   (damage
+    :initform 1)
+   (xp
+    :initform 1)))
 
-(defstruct (monster-demon
-             (:include monster
-                       (hp (random-range 15 20))
-                       (atck 5)
-                       (xp 5))))
+(defclass monster-demon (monster)
+  ((hp
+    :initform (random-range 15 20))
+   (damage
+    :initform 5)
+   (xp
+    :initform 5)))
 
-(defstruct (monster-devil
-             (:include monster
-                       (hp 666)
-                       (atck 666)
-                       (xp 666))))
+(defclass monster-devil (monster)
+  ((hp
+    :initform (random-range 100 125))
+   (damage
+    :initform 666)
+   (xp
+    :initform 100)))
 
 (defun monster-move (m x y)
   (when (and (free-square-p x y)
@@ -24,24 +55,24 @@
     (setf (monster-x m) x)
     (setf (monster-y m) y)))
 
-(defmethod monster-attack (m)
-  (let ((atck (monster-atck m))
-        (pos  (player-pos *p1*)))
+(defmethod monster-attack ((m monster))
+  (let ((dmg (damage m))
+        (pos (player-pos *p1*)))
     (add-message (format nil "~a hits you for ~a damage!"
-                         (monster-print-name m) atck))
-    (setf (player-hp *p1*) (max 0 (- (player-hp *p1*) atck)))
-    (make-damage-anim (car pos) (cdr pos) (format nil "~a" atck))))
+                         (monster-print-name m) dmg))
+    (setf (player-hp *p1*) (max 0 (- (player-hp *p1*) dmg)))
+    (make-damage-anim (car pos) (cdr pos) (format nil "~a" dmg))))
 
-(defmethod monster-print-name (m)
-  (format nil "~a~a" (if (monster-unique m) "" "the ")
+(defmethod monster-print-name ((m monster))
+  (format nil "~a~a" (if (unique-p m) "" "the ")
           (string-capitalize (object-name m))))
 
-(defmethod monster-die (m)
+(defmethod monster-die ((m monster))
   (add-message (format nil "~a dies!" (monster-print-name m)))
   (spawn-item (make-instance 'item-corpse) *lev* (monster-x m) (monster-y m))
-  (xp-gain (monster-xp m)))
+  (xp-gain (xp m)))
 
-(defmethod monster-ai (m)
+(defmethod monster-ai ((m monster))
   (let ((px (player-x *p1*))
         (py (player-y *p1*))
         (x  (monster-x m))
@@ -54,16 +85,17 @@
             (cond ((< x px) (monster-move m (1+ x) y))
                   ((> x px) (monster-move m (1- x) y)))))))
 
-(defmethod monster-pix-pos (m)
+(defmethod monster-pix-pos ((m monster))
   (sdl:point :x (* (monster-x m) *tile-size*)
              :y (* (monster-y m) *tile-size*)))
 
-(defmethod monster-show (m)
+(defmethod monster-show ((m monster))
   (format t "You see a ~a" (type-of m)))
 
 (defun update-monsters (level)
   (setf (level-monsters level)
-        (mapcan (lambda (m) (if (<= (monster-hp m) 0)
-                           (progn (monster-die m) nil)
-                           (list m)))
-                (level-monsters level))))
+        (mapcan
+         (lambda (m) (if (<= (hp m) 0)
+                    (progn (monster-die m) nil)
+                    (list m)))
+         (level-monsters level))))

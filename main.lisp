@@ -206,7 +206,7 @@
     (add-message (format nil "You hit ~a ~afor ~a damage!"
                          (monster-print-name m)
                          (if crit "critically " "") atck))
-    (decf (monster-hp m) atck)
+    (decf (hp m) atck)
     (make-damage-anim (monster-x m) (monster-y m) (write-to-string atck))))
 
 (defun player-update ()
@@ -705,9 +705,11 @@ too wide will be centered. Sprites too high will flood on top."
       :bag    nil
       :hunger 1100))))
 
-(defun spawn-monster (m level)
+(defun spawn-monster (monster-type level)
   (let ((pos (random-free-square (level-map level))))
-    (push (funcall m :x (car pos) :y (cdr pos)) (level-monsters level))))
+    (push
+     (make-instance monster-type :x (car pos) :y (cdr pos))
+     (level-monsters level))))
 
 (defun spawn-item (i level &optional x y)
   (let ((pos (random-free-square (level-map level))))
@@ -799,9 +801,9 @@ too wide will be centered. Sprites too high will flood on top."
     (add-level l)
     (loop until (not (map-disjoint-p (level-map l)))
           do (setf (level-map l) (map-gen-cel 4)))
-    (spawn-monster #'make-monster-demon l)
+    (spawn-monster 'monster-demon l)
 
-    (dotimes (_ 8) (spawn-monster #'make-monster-rat l))
+    (dotimes (_ 8) (spawn-monster 'monster-rat l))
     (dotimes (_ 5)
       (spawn-item (make-instance 'item-potion :color 'red :size 'big) l))
 
@@ -819,15 +821,15 @@ too wide will be centered. Sprites too high will flood on top."
     (add-level l)
     (loop until (not (map-disjoint-p (level-map l)))
           do (setf (level-map l) (map-gen-cel 4)))
-    (dotimes (_ 5) (spawn-monster #'make-monster-rat l))
-    (dotimes (_ 4) (spawn-monster #'make-monster-demon l)))
+    (dotimes (_ 5) (spawn-monster 'monster-rat l))
+    (dotimes (_ 4) (spawn-monster 'monster-demon l)))
 
   (let ((l (make-level :name 'last :map (map-gen-all-walls))))
     (add-level l)
     (loop until (not (map-disjoint-p (level-map l)))
           do (setf (level-map l) (map-gen-cel 4)))
-    (dotimes (_ 50) (spawn-monster #'make-monster-rat l))
-    (spawn-monster #'make-monster-devil l))
+    (dotimes (_ 50) (spawn-monster 'monster-rat l))
+    (spawn-monster 'monster-devil l))
 
   (connect-levels 'first 'second)
   (connect-levels 'second 'last)
