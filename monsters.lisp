@@ -86,10 +86,10 @@
     (setf (monster-y m) y)))
 
 (defmethod monster-attack ((m monster))
-  (let ((dmg (random-range (min-damage m) (max-damage m)))
-        (pos (player-pos *p1*)))
-    (add-message (format nil "~a hits you for ~a damage!"
-                         (monster-print-name m) dmg))
+  (let* ((raw-dmg (random-range (min-damage m) (max-damage m)))
+         (dmg (- raw-dmg (truncate (* (player-protection-rate) raw-dmg) 100)))
+         (pos (player-pos *p1*)))
+    (add-message "~a hits you for ~a damage!" (monster-print-name m) dmg)
     (setf (player-hp *p1*) (max 0 (- (player-hp *p1*) dmg)))
     (make-damage-anim (car pos) (cdr pos) (format nil "~a" dmg))))
 
@@ -98,7 +98,7 @@
           (string-capitalize (object-name m))))
 
 (defmethod monster-die ((m monster))
-  (add-message (format nil "~a dies!" (monster-print-name m)))
+  (add-message "~a dies!" (monster-print-name m))
   (spawn-item (make-instance 'item-corpse) *lev* (monster-x m) (monster-y m))
   (xp-gain (xp m)))
 

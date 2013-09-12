@@ -63,7 +63,7 @@
 
 ;; ---------------------------------------------------------- [ PLAYER DECLS]
 (defstruct player
-  x y hp max-hp lvl xp luck bag hunger weapon armor boots helmet)
+  x y hp max-hp lvl xp luck bag hunger weapon body-armor boots helmet)
 
 (defmethod player-pos (p)
   (cons (player-x p) (player-y p)))
@@ -206,6 +206,15 @@
                   (if crit "critically " "") atck)
     (decf (hp m) atck)
     (make-damage-anim (monster-x m) (monster-y m) (write-to-string atck))))
+
+(defun player-protection-rate ()
+  "Return the total protection rate provided by player's armor."
+  (let ((body-armor (player-body-armor *p1*))
+        (boots (player-boots *p1*))
+        (helmet (player-helmet *p1*)))
+    (+ (or (and body-armor (protection body-armor)) 0)
+       (or (and boots (protection boots)) 0)
+       (or (and helmet (protection helmet)) 0))))
 
 (defun player-update ()
   (when (zerop (player-hp *p1*))
@@ -499,8 +508,8 @@ version of NAME'd sprite."
 
     (sdl:draw-string-blended-*
      (fmt "Armor: ~a"
-          (if (player-armor *p1*)
-              (object-name (player-armor *p1*))
+          (if (player-body-armor *p1*)
+              (object-name (player-body-armor *p1*))
               "none"))
      (+ rx 10) 140)
 
@@ -557,8 +566,8 @@ too wide will be centered. Sprites too high will flood on top."
   (draw (sprite 'obj-player) 0 0)
   (when (player-weapon *p1*)
     (draw (eq-sprite (player-weapon *p1*)) 0 0))
-  (when (player-armor *p1*)
-    (draw (eq-sprite (player-armor *p1*)) 0 0))
+  (when (player-body-armor *p1*)
+    (draw (eq-sprite (player-body-armor *p1*)) 0 0))
   (when (player-boots *p1*)
     (draw (eq-sprite (player-boots *p1*)) 0 0))
   (when (player-helmet *p1*)

@@ -35,10 +35,6 @@
     :initform (error "Must supply a weapon's damage.")
     :accessor damage)))
 
-(defclass armor (equipment) ())
-(defclass boots (equipment) ())
-(defclass helmet (equipment) ())
-
 (defclass item-short-sword (weapon)
   ((damage
     :initform 7)
@@ -63,20 +59,38 @@
    (eq-sprite
     :initform (sprite 'eq-double-axe))))
 
-(defclass item-steel-armor (armor)
-  ((eq-sprite
+(defclass armor (equipment)
+  ((protection
+    :initarg :protection
+    :initform (error "Must supply an armor's protection rate.")
+    :accessor protection)))
+
+(defclass body-armor (armor) ())
+(defclass boots (armor) ())
+(defclass helmet (armor) ())
+
+(defclass item-steel-armor (body-armor)
+  ((protection
+    :initform 10)
+   (eq-sprite
     :initform (sprite 'eq-steel-armor))))
 
-(defclass item-leather-armor (armor)
-  ((eq-sprite
+(defclass item-leather-armor (body-armor)
+  ((protection
+    :initform 4)
+   (eq-sprite
     :initform (sprite 'eq-leather-armor))))
 
 (defclass item-leather-boots (boots)
-  ((eq-sprite
+  ((protection
+    :initform 1)
+   (eq-sprite
     :initform (sprite 'eq-leather-boots))))
 
 (defclass item-steel-helmet (helmet)
-  ((eq-sprite
+  ((protection
+    :initform 3)
+   (eq-sprite
     :initform (sprite 'eq-steel-helmet))))
 
 (defmethod item-apply (i)
@@ -108,8 +122,8 @@
     (cond
       ((subtypep type 'weapon)
        (equipment-apply (player-weapon *p1*) i))
-      ((subtypep type 'armor)
-       (equipment-apply (player-armor *p1*) i))
+      ((subtypep type 'body-armor)
+       (equipment-apply (player-body-armor *p1*) i))
       ((subtypep type 'boots)
        (equipment-apply (player-boots *p1*) i))
       ((subtypep type 'helmet)
@@ -140,7 +154,7 @@
 (defun equipped-p (i)
   "Return T if item I is equipped."
   (or (eq (player-weapon *p1*) i)
-      (eq (player-armor *p1*) i)
+      (eq (player-body-armor *p1*) i)
       (eq (player-boots *p1*) i)
       (eq (player-helmet *p1*) i)))
 
