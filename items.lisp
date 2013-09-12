@@ -74,27 +74,27 @@
     :initform (sprite 'eq-steel-helmet))))
 
 (defmethod item-apply (i)
-  (add-message (format nil "Can't apply the ~a." (object-name i))))
+  (add-message "Can't apply the ~a." (object-name i)))
 
 (defmethod item-apply ((i food))
   (remove-from-bag i)
-  (add-message (format nil "Yum ... ~a!" (object-name i)))
+  (add-message "Yum ... ~a!" (object-name i))
   (incf (player-hunger *p1*) 100)
   (end-turn))
 
 (defmethod item-apply ((i item-potion))
   (remove-from-bag i)
-  (add-message (format nil "Drank the ~a." (object-name i)))
+  (add-message "Drank the ~a." (object-name i))
   (setf (player-hp *p1*) (min (player-max-hp *p1*) (+ (player-hp *p1*) 100)))
   (end-turn))
 
 (defmacro equipment-apply (slot i)
   `(if (eq ,slot ,i)
        (progn
-         (add-message (format nil "Unequipped the ~a." (object-name ,i)))
+         (add-message "Unequipped the ~a." (object-name ,i))
          (setf ,slot nil))
        (progn
-         (add-message (format nil "Equipped the ~a." (object-name ,i)))
+         (add-message "Equipped the ~a." (object-name ,i))
          (setf ,slot ,i))))
 
 (defmethod item-apply ((i equipment))
@@ -112,14 +112,13 @@
   (end-turn))
 
 (defmethod item-inspect (i)
-  (add-message (format nil "ERROR: Description missing for ~a."
-                       (object-name i))))
+  (add-message "ERROR: Description missing for ~a." (object-name i)))
 
 (defmethod item-inspect ((i food))
-  (add-message (format nil "A delicious looking ~a." (object-name i))))
+  (add-message "A delicious looking ~a." (object-name i)))
 
 (defmethod item-inspect ((i item-potion))
-  (add-message (format nil "A bubbling ~a." (object-name i))))
+  (add-message "A bubbling ~a." (object-name i)))
 
 (defmethod item-sprite (i)
   (sprite (type-of i)))
@@ -145,7 +144,7 @@
     ((bag-full-p)
      (add-message "Bag is full!"))
     (t
-     (add-message (format nil "Grabbed the ~a." (object-name item)))
+     (add-message "Grabbed the ~a." (object-name item))
      (add-to-bag item)
      (setf (level-items *lev*) (remove item (level-items *lev*)))
      (end-turn))))
@@ -161,7 +160,7 @@
 (defun drop-item (n)
   (if (and n (nth n (player-bag *p1*)))
       (let* ((item (nth n (player-bag *p1*))))
-        (add-message (format nil "Dropped the ~a." (object-name item)))
+        (add-message "Dropped the ~a." (object-name item))
         (remove-from-bag item)
         (setf (item-x item) (player-x *p1*))
         (setf (item-y item) (player-y *p1*))

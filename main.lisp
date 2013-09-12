@@ -181,8 +181,7 @@
             (clear-anims)
             (recompute-fov)
             (add-message
-             (format nil "Climbed ~:[down~;up~] to ~a."
-                     (eq direction 'up) level))))
+             "Climbed ~:[down~;up~] to ~a." (eq direction 'up) level)))
         (add-message "Can't climb here!"))))
 
 (defun xp-gain (amount)
@@ -193,7 +192,7 @@
       (make-lvlup-anim (player-x *p1*) (player-y *p1*))
       (incf (player-max-hp *p1*) 50)
       (incf (player-hp *p1*) 50)
-      (add-message (format nil "You grow to level ~a!" (player-lvl *p1*))))))
+      (add-message "You grow to level ~a!" (player-lvl *p1*)))))
 
 (defun player-rest ()
   "Rest for one turn."
@@ -203,9 +202,9 @@
 (defun player-attack (m atck)
   (let* ((crit (< (random 100) (player-luck *p1*)))
          (atck (if crit (* atck 3) atck)))
-    (add-message (format nil "You hit ~a ~afor ~a damage!"
-                         (monster-print-name m)
-                         (if crit "critically " "") atck))
+    (add-message  "You hit ~a ~afor ~a damage!"
+                  (monster-print-name m)
+                  (if crit "critically " "") atck)
     (decf (hp m) atck)
     (make-damage-anim (monster-x m) (monster-y m) (write-to-string atck))))
 
@@ -436,8 +435,10 @@ version of NAME'd sprite."
         do (sdl:draw-string-blended-*
             msg (+ rx 10) (- *win-h* (+ 20 (* i 20))))))
 
-(defun add-message (msg)
-  (push (string-capitalize msg :end 1) *messages*))
+(defun add-message (message-string &rest format-arguments)
+  (let ((message
+         (apply #'format (cons nil (cons message-string format-arguments)))))
+    (push (string-capitalize message :end 1) *messages*)))
 
 ;; -------------------------------------------------------------- [ DISPLAY ]
 (defun draw-panel ()
