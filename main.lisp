@@ -9,10 +9,6 @@
 
 (in-package :dog)
 
-(load "util.lisp")
-(load "items.lisp")
-(load "monsters.lisp")
-
 (defparameter *width* 30
   "Number of horizontal tiles in the world map.")
 
@@ -166,7 +162,9 @@
                                  0
                                  (damage (player-weapon *p1*))))))
           ((walkable-p (map-ref x* y*))
-           (setf (player-x *p1*) x*) (setf (player-y *p1*) y*))))
+           (setf (player-x *p1*) x*) (setf (player-y *p1*) y*)
+           (when (object-at 'item x* y*)
+             (tutor 'grabbing)))))
   (recompute-fov)
   (end-turn))
 
@@ -428,6 +426,7 @@ version of NAME'd sprite."
 
 ;; ------------------------------------------------------------- [ MESSAGES ]
 (defparameter *messages* '("Welcome, adventurer!"))
+(defparameter *overlay-message* nil)
 
 (defun display-messages (rx n)
   (loop for msg in *messages*
@@ -436,9 +435,28 @@ version of NAME'd sprite."
             msg (+ rx 10) (- *win-h* (+ 20 (* i 20))))))
 
 (defun add-message (message-string &rest format-arguments)
-  (let ((message
-         (apply #'format (cons nil (cons message-string format-arguments)))))
+  (let ((message (apply #'fmt (cons message-string format-arguments))))
     (push (string-capitalize message :end 1) *messages*)))
+
+(defun add-overlay-message (message-string &rest format-arguments)
+  (setf *overlay-message* (apply #'fmt message-string format-arguments)))
+
+(defun clear-overlay-message ()
+  (setf *overlay-message* nil))
+
+(defun draw-overlay-message ()
+  "Draw a box displaying *OVERLAY-MESSAGE*."
+  (when *overlay-message*
+    (let* ((text (sdl:render-string-blended *overlay-message*))
+           (box (sdl:create-surface
+                 (+ (sdl:width text) *font-size*)
+                 (sdl:height text))))
+      (sdl:draw-surface-at-* text (truncate *font-size* 2) 0 :surface box)
+      (sdl:draw-surface-at-*
+       box
+       (+ (- (* *vp-x* *tile-size*) (truncate (sdl:width box) 2))
+          (truncate *tile-size* 2))
+       (- (* *vp-y* *tile-size*) (* *font-size* 2))))))
 
 ;; -------------------------------------------------------------- [ DISPLAY ]
 (defun draw-panel ()
@@ -452,8 +470,7 @@ version of NAME'd sprite."
      :color sdl:*red*)
 
     (sdl:draw-string-blended-*
-     (format nil "HP: ~a/~a" (player-hp *p1*)
-             (player-max-hp *p1*))
+     (fmt "HP: ~a/~a" (player-hp *p1*) (player-max-hp *p1*))
      (+ rx 10) 10)
 
     (sdl:draw-box
@@ -466,32 +483,31 @@ version of NAME'd sprite."
      :color sdl:*green*)
 
     (sdl:draw-string-blended-*
-     (format nil "Dungeon: ~a" (level-name *lev*))
-     (+ rx 10) 80)
+     (fmt "Dungeon: ~a" (level-name *lev*)) (+ rx 10) 80)
 
     (sdl:draw-string-blended-*
-     (format nil "Level: ~a" (player-lvl *p1*))
+     (fmt "Level: ~a" (player-lvl *p1*))
      (+ rx 10) 100)
 
     (sdl:draw-string-blended-*
-     (format nil "Weapon: ~a"
-             (if (player-weapon *p1*)
-                 (object-name (player-weapon *p1*))
-                 "fists"))
+     (fmt "Weapon: ~a"
+          (if (player-weapon *p1*)
+              (object-name (player-weapon *p1*))
+              "fists"))
      (+ rx 10) 120)
 
     (sdl:draw-string-blended-*
-     (format nil "Armor: ~a"
-             (if (player-armor *p1*)
-                 (object-name (player-armor *p1*))
-                 "none"))
+     (fmt "Armor: ~a"
+          (if (player-armor *p1*)
+              (object-name (player-armor *p1*))
+              "none"))
      (+ rx 10) 140)
 
     (sdl:draw-string-blended-*
-     (format nil "Helmet: ~a"
-             (if (player-helmet *p1*)
-                 (object-name (player-helmet *p1*))
-                 "none"))
+     (fmt "Helmet: ~a"
+          (if (player-helmet *p1*)
+              (object-name (player-helmet *p1*))
+              "none"))
      (+ rx 10) 160)
 
     ;; Urk... Do something about these three. ↓ ↓ ↓
@@ -600,7 +616,10 @@ too wide will be centered. Sprites too high will flood on top."
               (anim-x-off a))
         :y (+ (* *tile-size* *vp-y*)
               (* (- (anim-y a) py) *tile-size*)
-              (anim-y-off a))))))
+              (anim-y-off a)))))
+
+    ;; Draw overlay message
+    (draw-overlay-message))
 
   (draw-panel)
 
@@ -754,7 +773,25 @@ too wide will be centered. Sprites too high will flood on top."
     ((:SDL-KEY-PERIOD)            . player-rest)
     ((:SDL-KEY-RETURN)            . player-climb)))
 
+(defun key-to-string (key)
+  "Return a textual representation of KEY."
+  (let ((string (write-to-string key)))
+    (subseq string 9 (length string))))
+
+;; *KEY-LISTING* format directive:
+;;   (format nil *key-listing* '(A))       ==> "A"
+;;   (format nil *key-listing* '(A B))     ==> "A or B"
+;;   (format nil *key-listing* '(A B C))   ==> "A, B or C"
+(defparameter *key-listing*
+  "~{~#[~;~a~;~a or ~a~:;~@{~a~#[~;, or ~:;, ~]~}~]~}")
+
+(defun action-to-string (action)
+  "Return a formatted string listing all keys bound to ACTION."
+  (let ((keys (car (find action *key-map* :key #'cdr))))
+    (fmt *key-listing* (mapcar #'key-to-string keys))))
+
 (defun key-handle (key)
+  (clear-overlay-message)
   (cond
     (*grab-next-key*
      (progn (funcall *next-item-function* (key-to-item key))
@@ -770,9 +807,12 @@ too wide will be centered. Sprites too high will flood on top."
 (defparameter *font-large* nil
   "Large version of the default font.")
 
+(defparameter *font-size* 16
+  "Point size of the default font.")
+
 (defun init-fonts ()
   (let ((default-font-file "fonts/DidactGothic.ttf")
-        (default-font-size 16)
+        (default-font-size *font-size*)
         (default-font-size-large 20))
 
     (sdl:initialise-default-font
@@ -791,6 +831,12 @@ too wide will be centered. Sprites too high will flood on top."
 
 ;; ----------------------------------------------------------------- [ MAIN ]
 (sdl:with-init ()
+
+  (load "util.lisp")
+  (load "items.lisp")
+  (load "monsters.lisp")
+  (load "tutor.lisp")
+  
   (init-fonts)
   (sdl:window *win-w* *win-h* :title-caption "dog")
 
