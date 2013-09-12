@@ -2,7 +2,11 @@
   `((grabbing
      :limit 3
      :message-string "Press ~a to grab item"
-     :format-arguments ,(action-to-string 'player-grab))))
+     :format-arguments ,(action-to-string 'player-grab))
+    (climbing
+     :limit 2
+     :message-string "Press ~a to climb"
+     :format-arguments ,(action-to-string 'player-climb))))
 
 (defun tutor (topic)
   "Add a tutoring overlay regarding TOPIC, unless the limit for this TOPIC

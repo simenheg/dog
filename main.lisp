@@ -164,14 +164,15 @@
           ((walkable-p (map-ref x* y*))
            (setf (player-x *p1*) x*) (setf (player-y *p1*) y*)
            (when (object-at 'item x* y*)
-             (tutor 'grabbing)))))
+             (tutor 'grabbing))
+           (when (can-climb)
+             (tutor 'climbing)))))
   (recompute-fov)
   (end-turn))
 
 (defun player-climb ()
   "Move up or down stairs."
-  (let ((stairs (cdr (assoc (cons (player-x *p1*) (player-y *p1*))
-                            (level-stairs *lev*) :test #'equal))))
+  (let ((stairs (cdr (can-climb))))
     (if stairs
         (destructuring-bind (level direction) stairs
           (progn
@@ -677,6 +678,13 @@ too wide will be centered. Sprites too high will flood on top."
           (try))))
   (when (map-has-free-square (or map (level-map *lev*))) (try)))
 
+(defun can-climb ()
+  "If the player is currently able to climb, return relevant stair structure
+on the form ((X . Y) FLOOR DIRECTION)."
+  (assoc
+   (cons (player-x *p1*) (player-y *p1*))
+   (level-stairs *lev*) :test #'equal))
+
 (defun object-at (type x y &optional lev)
   (find-if (lambda (o) (and (= x (funcall (symbolicate type '-x) o))
                        (= y (funcall (symbolicate type '-y) o))))
@@ -771,7 +779,7 @@ too wide will be centered. Sprites too high will flood on top."
     ((:SDL-KEY-A)                 . player-apply)
     ((:SDL-KEY-I)                 . player-inspect)
     ((:SDL-KEY-PERIOD)            . player-rest)
-    ((:SDL-KEY-RETURN)            . player-climb)))
+    ((:SDL-KEY-C)                 . player-climb)))
 
 (defun key-to-string (key)
   "Return a textual representation of KEY."
