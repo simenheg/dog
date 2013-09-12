@@ -867,6 +867,7 @@ on the form ((X . Y) FLOOR DIRECTION)."
     (dotimes (_ 1) (spawn-item (make-instance 'item-pear) l))
     (dotimes (_ 3) (spawn-item (make-instance 'item-short-sword) l))
     (dotimes (_ 1) (spawn-item (make-instance 'item-long-sword) l))
+    (dotimes (_ 1) (spawn-item (make-instance 'item-double-axe) l))
     (dotimes (_ 3) (spawn-item (make-instance 'item-leather-armor) l))
     (dotimes (_ 3) (spawn-item (make-instance 'item-leather-boots) l))
     (dotimes (_ 1) (spawn-item (make-instance 'item-steel-armor) l))

@@ -57,6 +57,12 @@
    (eq-sprite
     :initform (sprite 'eq-long-sword))))
 
+(defclass item-double-axe (weapon)
+  ((damage
+    :initform 20)
+   (eq-sprite
+    :initform (sprite 'eq-double-axe))))
+
 (defclass item-steel-armor (armor)
   ((eq-sprite
     :initform (sprite 'eq-steel-armor))))
