@@ -49,6 +49,16 @@
    (xp
     :initform 5)))
 
+(defclass monster-young-wolf (monster)
+  ((hp
+    :initform (random-range 25 30))
+   (min-damage
+    :initform 7)
+   (max-damage
+    :initform 11)
+   (xp
+    :initform 7)))
+
 (defclass monster-cerberus (monster)
   ((hp
     :initform (random-range 35 40))
