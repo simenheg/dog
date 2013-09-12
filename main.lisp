@@ -858,6 +858,7 @@ on the form ((X . Y) FLOOR DIRECTION)."
           do (setf (level-map l) (map-gen-cel 4)))
     (spawn-monster 'monster-demon l)
 
+    (dotimes (_ 3) (spawn-monster 'monster-cerberus l))
     (dotimes (_ 8) (spawn-monster 'monster-rat l))
     (dotimes (_ 5)
       (spawn-item (make-instance 'item-potion :color 'red :size 'big) l))

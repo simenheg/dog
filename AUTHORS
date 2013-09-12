@@ -1,39 +1,39 @@
-Ground
+Sprite: Ground
  * By Lamoot
  * CC BY 3.0
  * http://opengameart.org/content/dirt-004
 
-Brick wall
+Sprite: Brick wall
  * By Tiziana
  * LGPL 2.1 / LGPL 3.0 / CC BY 3.0
  * http://opengameart.org/content/medium-grey-brick-wall-256px
 
-Demon, Devil
+Sprites: Demon, Devil, Cerberus
  * By battlestar
  * GPLv3+ / CC BY-SA 3.0
  * http://forums.wesnoth.org/viewtopic.php?f=23&t=14587
 
-Rat
+Sprite: Rat
  * From Wesnoth
  * GPLv2+
  * http://wesnoth.org/
 
-Player
+Sprite: Player
  * By thespaceinvader
  * GPLv2+
  * http://opengameart.org/content/wesnoth-generic-human
 
-Player equipments
+Sprites: Player equipments
  * From Wesnoth
  * GPLv2+
  * http://opengameart.org/content/wesnoth-frankenpack
  
-420 RPG sprites
+Sprites: 420 RPG sprites
  * By Ails
  * GPLv2 / GPLv3 / CC BY-SA 3.0
  * http://opengameart.org/content/420-pixel-art-icons-for-medievalfantasy-rpg
 
-Didact Gothic
+Font: Didact Gothic
  * By Daniel Johnson <il.basso.buffo@gmail.com>
  * OFL
  * http://openfontlibrary.org/en/font/didact-gothic

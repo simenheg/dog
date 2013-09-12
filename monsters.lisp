@@ -41,6 +41,14 @@
    (xp
     :initform 5)))
 
+(defclass monster-cerberus (monster)
+  ((hp
+    :initform (random-range 35 40))
+   (damage
+    :initform (random-range 5 15))
+   (xp
+    :initform 15)))
+
 (defclass monster-devil (monster)
   ((hp
     :initform (random-range 100 125))
