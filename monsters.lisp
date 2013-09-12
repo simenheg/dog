@@ -11,10 +11,14 @@
     :initarg :hp
     :accessor hp
     :documentation "Initial hit points of monster")
-   (damage
-    :initarg :damage
-    :accessor damage
-    :documentation "Damage dealt per attack.")
+   (min-damage
+    :initarg :min-damage
+    :accessor min-damage
+    :documentation "Minimum damage dealt by monster per attack.")
+   (max-damage
+    :initarg :max-damage
+    :accessor max-damage
+    :documentation "Maximum damage dealt by monster per attack.")
    (xp
     :initarg :xp
     :accessor xp
@@ -28,31 +32,39 @@
 (defclass monster-rat (monster)
   ((hp
     :initform (random-range 2 5))
-   (damage
+   (min-damage
     :initform 1)
+   (max-damage
+    :initform 2)
    (xp
     :initform 1)))
 
 (defclass monster-demon (monster)
   ((hp
     :initform (random-range 15 20))
-   (damage
+   (min-damage
     :initform 5)
+   (max-damage
+    :initform 7)
    (xp
     :initform 5)))
 
 (defclass monster-cerberus (monster)
   ((hp
     :initform (random-range 35 40))
-   (damage
-    :initform (random-range 5 15))
+   (min-damage
+    :initform 5)
+   (max-damage
+    :initform 15)
    (xp
     :initform 15)))
 
 (defclass monster-devil (monster)
   ((hp
     :initform (random-range 100 125))
-   (damage
+   (min-damage
+    :initform 1)
+   (max-damage
     :initform 666)
    (xp
     :initform 100)))
@@ -64,7 +76,7 @@
     (setf (monster-y m) y)))
 
 (defmethod monster-attack ((m monster))
-  (let ((dmg (damage m))
+  (let ((dmg (random-range (min-damage m) (max-damage m)))
         (pos (player-pos *p1*)))
     (add-message (format nil "~a hits you for ~a damage!"
                          (monster-print-name m) dmg))
